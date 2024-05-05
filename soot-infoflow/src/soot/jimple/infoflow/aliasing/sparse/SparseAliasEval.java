@@ -26,7 +26,7 @@ public class SparseAliasEval {
     private long aliasQueryCount = 0; // issued by the client
     private long scfgBuildCount = 0; // client queries + internal queries that lead to SCFG construction, i.e. not retrieved from cache
     private InfoflowPerformanceData performanceData;
-    private float initalStmtCount = 0;
+    private float initialStmtCount = 0;
     private float finalStmtCount = 0;
 
     public SparseAliasEval(SparseCFGCache.SparsificationStrategy sparsificationStrategy, InfoflowPerformanceData performanceData) {
@@ -44,7 +44,7 @@ public class SparseAliasEval {
             for (SparseCFGQueryLog queryLog : queryLogs) {
                 sparseCFGBuildTime += queryLog.getDuration().toMillis();
                 if(queryLog.getInitialStmtCount()>0 && queryLog.getFinalStmtCount()>0){
-                    initalStmtCount += queryLog.getInitialStmtCount();
+                    initialStmtCount += queryLog.getInitialStmtCount();
                     finalStmtCount += queryLog.getFinalStmtCount();
                     scfgBuildCount++;
                 }
@@ -126,7 +126,7 @@ public class SparseAliasEval {
 
     private String degreeOfSparsification(){
         if(finalStmtCount!=0){
-            return String.format("%.2f",(initalStmtCount-finalStmtCount)/initalStmtCount);
+            return String.format("%.2f",(initialStmtCount -finalStmtCount)/ initialStmtCount);
         }
         return "0";
     }

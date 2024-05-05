@@ -7,6 +7,7 @@ import boomerang.results.BackwardBoomerangResults;
 import boomerang.scene.*;
 import boomerang.scene.jimple.*;
 import boomerang.scene.sparse.SparseCFGCache;
+import boomerang.scene.sparse.eval.MainQueryInfo;
 import boomerang.util.AccessPath;
 import com.google.common.base.Stopwatch;
 import com.google.common.cache.CacheBuilder;
@@ -147,6 +148,7 @@ public class SparseAliasManager {
         }
         Stopwatch stopwatch = Stopwatch.createStarted();
         BackwardQuery query = createQuery(stmt, method, value);
+        MainQueryInfo.getInstance().setInfo(query.cfgEdge().getMethod(), query.cfgEdge().getStart(), query.var());
         Set<AccessPath> aliases = getAliases(query);
         Duration elapsed = stopwatch.elapsed();
         totalAliasingDuration = totalAliasingDuration.plus(elapsed);
