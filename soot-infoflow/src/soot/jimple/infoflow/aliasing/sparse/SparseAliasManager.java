@@ -3,6 +3,9 @@ package soot.jimple.infoflow.aliasing.sparse;
 import boomerang.BackwardQuery;
 import boomerang.Boomerang;
 import boomerang.DefaultBoomerangOptions;
+import boomerang.datacollection.DataCollection;
+import boomerang.datacollection.MethodLog;
+import boomerang.datacollection.QueryLog;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.scene.*;
 import boomerang.scene.jimple.*;
@@ -30,8 +33,14 @@ public class SparseAliasManager {
     private DataFlowScope dataFlowScope;
 
     private SparseCFGCache.SparsificationStrategy sparsificationStrategy;
+
     private int queryCount = 0;
+    private DataCollection dataCollection;
     private Map<Integer, BackwardQuery> id2Query = new HashMap<>();
+    private Map<Integer, Long> id2PDSBuildingTime = new HashMap();
+    private Map<Integer, Long> id2AliasSearchingTime = new HashMap();
+    private Map<Integer, Long> id2QueryTime = new HashMap();
+    private Duration totalAliasingDuration;
 
     static class FlowDroidBoomerangOptions extends DefaultBoomerangOptions {
 
@@ -85,13 +94,12 @@ public class SparseAliasManager {
         }
     }
 
-    private Duration totalAliasingDuration;
-
     private SparseAliasManager(SparseCFGCache.SparsificationStrategy sparsificationStrategy) {
         this.sparsificationStrategy = sparsificationStrategy;
         totalAliasingDuration = Duration.ZERO;
         sootCallGraph = new SootCallGraph();
         dataFlowScope = SootDataFlowScope.make(Scene.v());
+        dataCollection = DataCollection.getInstance();
     }
 
     public Duration getTotalDuration() {
@@ -122,6 +130,7 @@ public class SparseAliasManager {
 
     private void countQuery(BackwardQuery query) {
         id2Query.put(queryCount, query);
+        dataCollection.registerQuery(query);
         queryCount++;
     }
 
@@ -145,8 +154,38 @@ public class SparseAliasManager {
         boomerangSolver =
                 new Boomerang(
                         sootCallGraph, dataFlowScope, new FlowDroidBoomerangOptions(INSTANCE.sparsificationStrategy));
+
+        // record PDS building time
+        Stopwatch stopwatch = Stopwatch.createUnstarted();
+        stopwatch.start();
         BackwardBoomerangResults<Weight.NoWeight> results = boomerangSolver.solve(query);
-        return results.getAllAliases();
+        stopwatch.stop();
+        Duration elapsed = stopwatch.elapsed();
+        this.id2PDSBuildingTime.put(queryCount - 1, elapsed.toNanos());
+
+        stopwatch.start();
+        Set<AccessPath> aliases = results.getAllAliases();
+        elapsed = stopwatch.elapsed();
+        this.id2AliasSearchingTime.put(queryCount - 1, elapsed.toNanos());
+
+        return aliases;
+    }
+
+    private void resultsPrinter() {
+        for (int i = 0; i < queryCount; i++) {
+            BackwardQuery query = this.id2Query.get(i);
+            LOGGER.info(query.getInfo());
+            LOGGER.info(
+                    "QueryTime: {}  PDSBuildingTime: {}  AliasSearchingTime: {}",
+                    this.id2QueryTime.get(i),
+                    this.id2PDSBuildingTime.get(i),
+                    this.id2AliasSearchingTime.get(i));
+            QueryLog queryLog = dataCollection.getQueryLog(query);
+            for (MethodLog methodLog : queryLog.getLogList()) {
+                LOGGER.info(methodLog.toString());
+            }
+        }
+        LOGGER.info("Running Time: {}", totalAliasingDuration.toMillis());
     }
 
 }
