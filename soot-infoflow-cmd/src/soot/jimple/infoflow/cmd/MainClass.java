@@ -33,6 +33,7 @@ import soot.jimple.infoflow.InfoflowConfiguration.PathBuildingAlgorithm;
 import soot.jimple.infoflow.InfoflowConfiguration.PathReconstructionMode;
 import soot.jimple.infoflow.InfoflowConfiguration.StaticFieldTrackingMode;
 import soot.jimple.infoflow.InfoflowConfiguration.DataFlowDirection;
+import soot.jimple.infoflow.aliasing.sparse.DataWriter;
 import soot.jimple.infoflow.aliasing.sparse.SparseAliasEval;
 import soot.jimple.infoflow.android.InfoflowAndroidConfiguration;
 import soot.jimple.infoflow.android.InfoflowAndroidConfiguration.CallbackAnalyzer;
@@ -361,7 +362,8 @@ public class MainClass {
 				if (taintWrapper instanceof SummaryTaintWrapper)
 					injectStubDroidHierarchy((SummaryTaintWrapper) taintWrapper);
 
-				SparseAliasEval.targetProgram = apkFile.getName();
+				//SparseAliasEval.targetProgram = apkFile.getName();
+				DataWriter.setTargetProgram(apkFile.getName());
 				// Start the data flow analysis
 				analyzer.runInfoflow();
 

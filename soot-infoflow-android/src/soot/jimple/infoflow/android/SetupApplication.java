@@ -20,6 +20,7 @@ import soot.*;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.*;
 import soot.jimple.infoflow.InfoflowConfiguration.SootIntegrationMode;
+import soot.jimple.infoflow.aliasing.sparse.DataWriter;
 import soot.jimple.infoflow.aliasing.sparse.SparseAliasEval;
 import soot.jimple.infoflow.android.InfoflowAndroidConfiguration.CallbackConfiguration;
 import soot.jimple.infoflow.android.InfoflowAndroidConfiguration.IccConfiguration;
@@ -836,8 +837,7 @@ public class SetupApplication implements ITaintWrapperDataFlowAnalysis {
 	 * out of memory. This method also starts the watchdog thread. Derived classes
 	 * can implement their own timeout handling if necessary.
 	 * 
-	 * @param callbackConfig The configuration for the callback analysis
-	 * @param analyzer       The callback analyzer
+	 * @param jimpleClass       The callback analyzer
 	 * @return The memory watcher that keeps track of the amount of memory spent in
 	 *         the callback analysis
 	 */
@@ -993,7 +993,7 @@ public class SetupApplication implements ITaintWrapperDataFlowAnalysis {
 	 * scans the code including unreachable methods.
 	 * 
 	 * @param lfp        The layout file parser to be used for analyzing UI controls
-	 * @param entryPoint The entry point for which to calculate the callbacks. Pass
+	 * @param component The entry point for which to calculate the callbacks. Pass
 	 *                   null to calculate callbacks for all entry points.
 	 * @throws IOException Thrown if a required configuration cannot be read
 	 */
@@ -1086,7 +1086,7 @@ public class SetupApplication implements ITaintWrapperDataFlowAnalysis {
 	 * Creates the main method based on the current callback information, injects it
 	 * into the Soot scene.
 	 * 
-	 * @param The class name of a component to create a main method containing only
+	 * @param component The class name of a component to create a main method containing only
 	 *            that component, or null to create main method for all components
 	 */
 	private void createMainMethod(SootClass component) {
@@ -1631,11 +1631,12 @@ public class SetupApplication implements ITaintWrapperDataFlowAnalysis {
 			default:
 				break;
 		}
-		if(sparsificationStrategy!=null){ // i.e. SparseBoomerang not used
+		/*if(sparsificationStrategy!=null){ // i.e. SparseBoomerang not used
 			SparseAliasEval sparseAliasEval = new SparseAliasEval(sparsificationStrategy, performanceData);
 			sparseAliasEval.generate();
-		}
-
+		}*/
+		DataWriter dataWriter = new DataWriter(sparsificationStrategy);
+		dataWriter.write();
 	}
 
 	/**

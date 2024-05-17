@@ -40,9 +40,9 @@ public class SparseAliasEval {
     private void handleSparsificationSpecificData() {
         if(sparsificationStrategy!= SparseCFGCache.SparsificationStrategy.NONE){
             SparseCFGCache cache = SparseCFGCache.getInstance(sparsificationStrategy, true);
-            List<SparseCFGQueryLog> queryLogs = cache.getQueryLogs();
+            List<SparseCFGQueryLog> queryLogs = cache.getSCFGLogs();
             for (SparseCFGQueryLog queryLog : queryLogs) {
-                sparseCFGBuildTime += queryLog.getDuration().toMillis();
+                //sparseCFGBuildTime += queryLog.getDuration().toMillis();
                 if(queryLog.getInitialStmtCount()>0 && queryLog.getFinalStmtCount()>0){
                     initialStmtCount += queryLog.getInitialStmtCount();
                     finalStmtCount += queryLog.getFinalStmtCount();
