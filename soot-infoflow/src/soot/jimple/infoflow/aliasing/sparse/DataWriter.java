@@ -27,7 +27,6 @@ import java.util.Map;
 public class DataWriter {
 
     private final String OUT_PUT_DIR = "./results";
-    private final String METHOD_DIR = "./results/Methods";
     private static File file;
     private static String targetProgram;
     private List<FeatureExtractionUnit> featureExtractors = new ArrayList<>();
@@ -113,6 +112,8 @@ public class DataWriter {
         stringBuilder.append(",");
         stringBuilder.append("built/retrieved");
         stringBuilder.append(",");
+        stringBuilder.append("sparseDegree");
+        stringBuilder.append(",");
         stringBuilder.append("methodStmtsCount");
         stringBuilder.append(",");
         stringBuilder.append("relatedTypeCount");
@@ -178,8 +179,13 @@ public class DataWriter {
             sb.append(",");
             if(retrieved){
                 sb.append("retrieved");
+                sb.append(",");
+                sb.append("NN");
             }else {
                 sb.append("built");
+                sb.append(",");
+                double degree = (double) scfgLog.getFinalStmtCount()/(double) scfgLog.getInitialStmtCount();
+                sb.append(String.format("%.2f", degree));
             }
             sb.append(",");
             List<Feature> features = extract(method, scfgLog.getValue(), scfgLog.getStmt());
@@ -192,6 +198,7 @@ public class DataWriter {
         //arrange to data
         for(SootMethod method : method2Result.keySet()){
             result.add(method2Result.get(method));
+            //writeMethodBody(method);
         }
         for(Map.Entry<SootMethod, Long> entry : method2Time.entrySet()){
             if(!method2Result.containsKey(entry.getKey())){
@@ -201,10 +208,11 @@ public class DataWriter {
                 sb.append(",");
                 sb.append("NN");
                 sb.append(",");
-                sb.append("NN,NN,NN,NN,NN,NN,NN,");
+                sb.append("NN,NN,NN,NN,NN,NN,NN,NN,");
                 sb.append(entry.getValue());
                 sb.append(System.lineSeparator());
                 result.add(sb.toString());
+                //writeMethodBody(entry.getKey());
             }
         }
         return result;
@@ -257,6 +265,28 @@ public class DataWriter {
             sb.append(",");
         }
         return sb.toString();
+    }
+
+    private void writeMethodBody(SootMethod method) {
+        int toIndex = targetProgram.lastIndexOf(".apk");
+        String apk_name = targetProgram.substring(0, toIndex);
+        File dir = new File(OUT_PUT_DIR+File.separator+ "Methods" + File.separator + apk_name);
+        if(!dir.exists()){
+            dir.mkdir();
+        }
+        String fileName = method.getDeclaringClass().toString() + "." + method.getName() + ".txt";
+        File methodFile = new File(dir + File.separator + fileName);
+        if(methodFile.exists()){
+            return;
+        }
+        try{
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(methodFile), "UTF-8"));
+            writer.write(method.getActiveBody().toString());
+            writer.flush();
+            writer.close();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
 }
