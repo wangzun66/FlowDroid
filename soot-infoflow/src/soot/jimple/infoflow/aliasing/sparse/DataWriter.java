@@ -4,25 +4,28 @@ import boomerang.BackwardQuery;
 import boomerang.datacollection.DataCollection;
 import boomerang.datacollection.MethodLog;
 import boomerang.datacollection.QueryLog;
+import boomerang.scene.sparse.SparseAliasingCFG;
 import boomerang.scene.sparse.SparseCFGCache;
 import boomerang.scene.sparse.eval.SparseCFGQueryLog;
 import core.fx.base.*;
 import core.fx.methodbased.AllocationCount;
 import core.fx.methodbased.MethodStmtCount;
 import core.fx.methodbased.ProportionOfRelevantStmts;
-import core.fx.methodstmtbased.ProportionOfRelevantStmtsBeforeSS;
+import core.fx.methodstmtbased.ProportionOfRelevantStmtsBeforeStmt;
+import core.fx.methodstmtbased.ProportionOfVisitedMethodBeforeStmt;
 import core.fx.methodstmtbased.StmtDepthProportion;
+import core.fx.methodvarbased.ProportionOfVisitedMethod;
 import core.fx.methodvarbased.RelatedTypesCount;
 import core.fx.methodvarbased.TypeHierarchySize;
 import soot.SootMethod;
+import soot.Unit;
 import soot.Value;
 import soot.jimple.Stmt;
+import soot.jimple.internal.JReturnStmt;
+import soot.jimple.internal.JReturnVoidStmt;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class DataWriter {
 
@@ -55,7 +58,6 @@ public class DataWriter {
         }catch (IOException e) {
             e.printStackTrace();
         }
-
         //write data
         try{
             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file, true), "UTF-8"));
@@ -74,7 +76,6 @@ public class DataWriter {
             e.printStackTrace();
         }
     }
-
 
     private void createFileName(){
         int toIndex = targetProgram.lastIndexOf(".apk");
@@ -114,11 +115,17 @@ public class DataWriter {
         stringBuilder.append(",");
         stringBuilder.append("sparseDegree");
         stringBuilder.append(",");
+        stringBuilder.append("hasSameReturnType");
+        stringBuilder.append(",");
+        stringBuilder.append("isTailStmt");
+        stringBuilder.append(",");
         stringBuilder.append("methodStmtsCount");
         stringBuilder.append(",");
         stringBuilder.append("relatedTypeCount");
         stringBuilder.append(",");
         stringBuilder.append("typeHierarchySize");
+        stringBuilder.append(",");
+        stringBuilder.append("propOfVisitedMethod");
         stringBuilder.append(",");
         stringBuilder.append("propOfRStmt");
         stringBuilder.append(",");
@@ -188,6 +195,22 @@ public class DataWriter {
                 sb.append(String.format("%.2f", degree));
             }
             sb.append(",");
+            if(!retrieved){
+                if(sparsificationStrategy == SparseCFGCache.SparsificationStrategy.TYPE_BASED){
+                    sb.append(hasSameReturnedType(method, scfgLog.getValue()));
+                    sb.append(",");
+                    sb.append("NN");
+                }else if(sparsificationStrategy == SparseCFGCache.SparsificationStrategy.ALIAS_AWARE){
+                    sb.append("NN");
+                    sb.append(",");
+                    sb.append(isTailStmt(scfgLog.getStmt()));
+                }
+            }else {
+                sb.append("NN");
+                sb.append(",");
+                sb.append("NN");
+            }
+            sb.append(",");
             List<Feature> features = extract(method, scfgLog.getValue(), scfgLog.getStmt());
             sb.append(convertFeaturesToData(features));
             sb.append(method2Time.get(method));
@@ -199,7 +222,9 @@ public class DataWriter {
         for(SootMethod method : method2Result.keySet()){
             result.add(method2Result.get(method));
             //writeMethodBody(method);
+            //writeSCFGBody(method);
         }
+
         for(Map.Entry<SootMethod, Long> entry : method2Time.entrySet()){
             if(!method2Result.containsKey(entry.getKey())){
                 StringBuilder sb = new StringBuilder();
@@ -208,7 +233,7 @@ public class DataWriter {
                 sb.append(",");
                 sb.append("NN");
                 sb.append(",");
-                sb.append("NN,NN,NN,NN,NN,NN,NN,NN,");
+                sb.append("NN,NN,NN,NN,NN,NN,NN,NN,NN,NN,NN,NN,");
                 sb.append(entry.getValue());
                 sb.append(System.lineSeparator());
                 result.add(sb.toString());
@@ -218,14 +243,32 @@ public class DataWriter {
         return result;
     }
 
+    private boolean hasSameReturnedType(SootMethod sm, Value value){
+        if(sm.getReturnType() != null){
+            if(sm.getReturnType().equals(value.getType())){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isTailStmt(Stmt stmt){
+        if(stmt instanceof JReturnStmt || stmt instanceof JReturnVoidStmt){
+            return true;
+        }
+        return false;
+    }
+
     private void createFeaturesExtractor(){
         featureExtractors.add(new MethodStmtCount());
         featureExtractors.add(new RelatedTypesCount());
         featureExtractors.add(new TypeHierarchySize());
+        featureExtractors.add(new ProportionOfVisitedMethod());
         featureExtractors.add(new ProportionOfRelevantStmts());
         featureExtractors.add(new StmtDepthProportion());
         featureExtractors.add(new AllocationCount());
-        featureExtractors.add(new ProportionOfRelevantStmtsBeforeSS());
+        featureExtractors.add(new ProportionOfRelevantStmtsBeforeStmt());
+        featureExtractors.add(new ProportionOfVisitedMethodBeforeStmt());
     }
 
     private List<Feature> extract(SootMethod method, Value value, Stmt stmt) {
@@ -289,4 +332,40 @@ public class DataWriter {
         }
     }
 
+    private void writeSCFGBody(SootMethod method) {
+        Map<String, Map<String, Set<SparseAliasingCFG>> > cache = SparseCFGCache.getInstance(sparsificationStrategy, true).getCache();
+        if(!cache.containsKey(method.getSignature())){
+            return;
+        }
+        int toIndex = targetProgram.lastIndexOf(".apk");
+        String apk_name = targetProgram.substring(0, toIndex);
+        File dir = new File(OUT_PUT_DIR+File.separator+ "Methods" + File.separator + apk_name + File.separator + "SCFG_" + sparsificationStrategy);
+        if(!dir.exists()){
+            dir.mkdir();
+        }
+        Map<String, Set<SparseAliasingCFG>> queryInfo2SCFG = cache.get(method.getSignature());
+        String filename = method.getDeclaringClass() + "." + method.getName();
+        int i= 0;
+        for(Map.Entry<String, Set<SparseAliasingCFG>> entry : queryInfo2SCFG.entrySet()){
+            for(SparseAliasingCFG scfg : entry.getValue()){
+                String name = filename+ "_" + i;
+                File methodFile = new File(dir + File.separator + name);
+                i++;
+                if(methodFile.exists()){
+                    return;
+                }
+                try{
+                    BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(methodFile, true), "UTF-8"));
+                    writer.write(entry.getKey() + System.lineSeparator());
+                    for(Unit stmt : scfg.getGraph().nodes()){
+                        writer.write(stmt.toString() + System.lineSeparator());
+                    }
+                    writer.flush();
+                    writer.close();
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
 }
