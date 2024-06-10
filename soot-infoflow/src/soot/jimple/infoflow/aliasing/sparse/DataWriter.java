@@ -29,10 +29,12 @@ import java.util.*;
 
 public class DataWriter {
 
-    private final String OUT_PUT_DIR = "./results";
+    private final String OUT_PUT_DIR = "./raw_data";
     private static File file;
     private static String targetProgram;
     private List<FeatureExtractionUnit> featureExtractors = new ArrayList<>();
+    private Map<String, Set<String>> visitedQueries = new HashMap<>();
+    private int count = 0;
 
 
     private final SparseCFGCache.SparsificationStrategy sparsificationStrategy;
@@ -113,6 +115,8 @@ public class DataWriter {
         stringBuilder.append(",");
         stringBuilder.append("built/retrieved");
         stringBuilder.append(",");
+        stringBuilder.append("scfg");
+        stringBuilder.append(",");
         stringBuilder.append("sparseDegree");
         stringBuilder.append(",");
         stringBuilder.append("hasSameReturnType");
@@ -135,6 +139,8 @@ public class DataWriter {
         stringBuilder.append(",");
         stringBuilder.append("propOfStmtBeforeQS");
         stringBuilder.append(",");
+        stringBuilder.append("propOfVMBeforeQS");
+        stringBuilder.append(",");
         stringBuilder.append("visitedTime");
         stringBuilder.append(System.lineSeparator());
         return stringBuilder.toString();
@@ -142,7 +148,7 @@ public class DataWriter {
 
     private String createPrefixForQuery(int id){
         StringBuilder sb = new StringBuilder();
-        sb.append(id);
+        sb.append(count);
         sb.append(",");
         BackwardQuery query = SparseAliasManager.getInstance(sparsificationStrategy).getId2Query().get(id);
         sb.append(query.getInfo().replace(',', ' '));
@@ -165,6 +171,9 @@ public class DataWriter {
         //arrange visited time
         Map<SootMethod, Long> method2Time = new HashMap<>();
         List<MethodLog> logs = queryLog.getLogList();
+        if(logs == null){
+            return result;
+        }
         for(MethodLog log : logs){
             SootMethod method = log.getMethod();
             Long time = log.getDuration().toNanos();
@@ -173,7 +182,19 @@ public class DataWriter {
             }
             method2Time.put(method, time);
         }
-
+        if(visitedQueries.keySet().contains(queryLog.getQuery().getInfo())){
+            assert visitedQueries.get(queryLog.getQuery().getInfo()).size() == method2Time.keySet().size();
+            for(SootMethod method : method2Time.keySet()){
+                assert visitedQueries.get(queryLog.getQuery().getInfo()).contains(method.getSignature());
+            }
+            return result;
+        }
+        Set<String> ms = new HashSet<>();
+        for(SootMethod method : method2Time.keySet()){
+            ms.add(method.getSignature());
+        }
+        visitedQueries.put(queryLog.getQuery().getInfo(), ms);
+        count++;
         //arrange scfg logs
         Map<SootMethod, String> method2Result = new HashMap<>();
         List<SparseCFGQueryLog> scfgLogs = queryLog.getSCFGLogList();
@@ -187,9 +208,13 @@ public class DataWriter {
             if(retrieved){
                 sb.append("retrieved");
                 sb.append(",");
+                sb.append(scfgLog.getScfg());
+                sb.append(",");
                 sb.append("NN");
             }else {
                 sb.append("built");
+                sb.append(",");
+                sb.append(scfgLog.getScfg());
                 sb.append(",");
                 double degree = (double) scfgLog.getFinalStmtCount()/(double) scfgLog.getInitialStmtCount();
                 sb.append(String.format("%.2f", degree));
@@ -231,9 +256,7 @@ public class DataWriter {
                 sb.append(prefix);
                 sb.append(entry.getKey().getSignature().replace(',', ' '));
                 sb.append(",");
-                sb.append("NN");
-                sb.append(",");
-                sb.append("NN,NN,NN,NN,NN,NN,NN,NN,NN,NN,NN,NN,");
+                sb.append("NN,NN,NN,NN,NN,NN,NN,NN,NN,NN,NN,NN,NN,NN,");
                 sb.append(entry.getValue());
                 sb.append(System.lineSeparator());
                 result.add(sb.toString());

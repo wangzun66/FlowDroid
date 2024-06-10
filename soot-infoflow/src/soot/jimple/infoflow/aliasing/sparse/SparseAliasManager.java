@@ -120,8 +120,8 @@ public class SparseAliasManager {
      * @return
      */
     public synchronized Set<AccessPath> getAliases(Stmt stmt, SootMethod method, Value value) {
-        Stopwatch stopwatch = Stopwatch.createStarted();
         BackwardQuery query = createQuery(stmt, method, value);
+        Stopwatch stopwatch = Stopwatch.createStarted();
         Set<AccessPath> aliases = getAliases(query);
         Duration elapsed = stopwatch.elapsed();
         this.id2QueryTime.put(queryCount-1, elapsed.toNanos());
