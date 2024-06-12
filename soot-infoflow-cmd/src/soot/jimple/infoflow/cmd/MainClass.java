@@ -671,7 +671,9 @@ public class MainClass {
 			return AliasingAlgorithm.TypeBasedSparseBoomerang;
 		else if (aliasAlgo.equalsIgnoreCase("ALIASAWARESPARSEBOOMERANG"))
 			return AliasingAlgorithm.AliasAwareSparseBoomerang;
-		else {
+		else if	(aliasAlgo.equalsIgnoreCase("DYNAMICSPARSEBOOMERANG")){
+			return AliasingAlgorithm.DynamicSparseBoomerang;
+		} else {
 			System.err.println(String.format("Invalid aliasing algorithm: %s", aliasAlgo));
 			throw new AbortAnalysisException();
 		}

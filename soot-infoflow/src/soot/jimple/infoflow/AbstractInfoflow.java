@@ -646,7 +646,8 @@ public abstract class AbstractInfoflow implements IInfoflow {
 	private boolean isBoomerangActive(){
 		return config.getAliasingAlgorithm() == InfoflowConfiguration.AliasingAlgorithm.Boomerang
 				|| config.getAliasingAlgorithm() == InfoflowConfiguration.AliasingAlgorithm.TypeBasedSparseBoomerang
-				|| config.getAliasingAlgorithm() == InfoflowConfiguration.AliasingAlgorithm.AliasAwareSparseBoomerang;
+				|| config.getAliasingAlgorithm() == InfoflowConfiguration.AliasingAlgorithm.AliasAwareSparseBoomerang
+				|| config.getAliasingAlgorithm() == InfoflowConfiguration.AliasingAlgorithm.DynamicSparseBoomerang;
 	}
 
 	private void runTaintAnalysis(final ISourceSinkManager sourcesSinks, final Set<String> additionalSeeds,

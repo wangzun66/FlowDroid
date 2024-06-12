@@ -5,14 +5,11 @@ import boomerang.scene.Val;
 import boomerang.scene.jimple.JimpleField;
 import boomerang.scene.jimple.JimpleMethod;
 import boomerang.scene.jimple.JimpleVal;
-import boomerang.scene.sparse.SparseCFGCache;
 import boomerang.util.AccessPath;
 import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import heros.solver.Pair;
 import soot.*;
-import soot.jimple.Jimple;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.aliasing.AbstractBulkAliasStrategy;
@@ -24,7 +21,6 @@ import soot.jimple.infoflow.solver.cfg.BackwardsInfoflowCFG;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Extended from: https://github.com/johspaeth/boomerang-artifact/blob/master/soot-infoflow-alias/src/soot/jimple/infoflow/aliasing/BoomerangAliasStrategy.java
@@ -49,7 +45,7 @@ public abstract class AbstractBoomerangAliasStrategy extends AbstractBulkAliasSt
         methodIgnoreList.add("boolean equals(java.lang.Object)");
     }
 
-    protected abstract SparseAliasManager getSparseAliasManager();
+    protected abstract StrategyDeciderManager getSparseAliasManager();
 
 
     private boolean isIgnoredMethod(SootMethod m) {
@@ -92,7 +88,7 @@ public abstract class AbstractBoomerangAliasStrategy extends AbstractBulkAliasSt
             return;
         }
         List<SootField> fields = getFields(newAbs);
-        SparseAliasManager aliasManager = getSparseAliasManager();
+        StrategyDeciderManager aliasManager = getSparseAliasManager();
         Set<AccessPath> aliases = aliasManager.getAliases(src, method, base);
         aliases = removeRedundantAlias(newAbs, aliases);
         Set<AccessPath> aps = new HashSet<>();
@@ -211,7 +207,7 @@ public abstract class AbstractBoomerangAliasStrategy extends AbstractBulkAliasSt
         if (base == null)
             return;
         SootMethod method = icfg.getMethodOf(src);
-        SparseAliasManager aliasManager = getSparseAliasManager();
+        StrategyDeciderManager aliasManager = getSparseAliasManager();
         // Query for the base variable
         Set<AccessPath> aliases = aliasManager.getAliases(src, method, base);
         //aliases.forEach(System.out::println);

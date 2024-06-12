@@ -9,7 +9,7 @@ public class DefaultBoomerangAliasStrategy extends AbstractBoomerangAliasStrateg
     }
 
     @Override
-    public SparseAliasManager getSparseAliasManager() {
-        return SparseAliasManager.getInstance(SparseCFGCache.SparsificationStrategy.NONE);
+    public StrategyDeciderManager getSparseAliasManager() {
+        return StrategyDeciderManager.getInstance(SparseCFGCache.SparsificationStrategy.NONE);
     }
 }

@@ -103,7 +103,11 @@ public class InfoflowConfiguration {
 		/**
 		 * Use Boomerang with alias-aware sparsification
 		 */
-		AliasAwareSparseBoomerang
+		AliasAwareSparseBoomerang,
+		/**
+		 * Use Boomerang with strategy decider
+		 */
+		DynamicSparseBoomerang
 	}
 
 	/**

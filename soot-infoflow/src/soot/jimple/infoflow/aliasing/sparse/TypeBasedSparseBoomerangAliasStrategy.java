@@ -9,7 +9,7 @@ public class TypeBasedSparseBoomerangAliasStrategy extends AbstractBoomerangAlia
     }
 
     @Override
-    public SparseAliasManager getSparseAliasManager() {
-        return SparseAliasManager.getInstance(SparseCFGCache.SparsificationStrategy.TYPE_BASED);
+    public StrategyDeciderManager getSparseAliasManager() {
+        return StrategyDeciderManager.getInstance(SparseCFGCache.SparsificationStrategy.TYPE_BASED);
     }
 }

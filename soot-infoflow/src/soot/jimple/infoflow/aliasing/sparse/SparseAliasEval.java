@@ -34,7 +34,7 @@ public class SparseAliasEval {
         this.performanceData = performanceData;
         handleSparsificationSpecificData();
         handleAliasQueryTime();
-        this.aliasQueryCount = SparseAliasManager.getInstance(sparsificationStrategy).getQueryCount();
+        this.aliasQueryCount = StrategyDeciderManager.getInstance(sparsificationStrategy).getQueryCount();
     }
 
     private void handleSparsificationSpecificData() {
@@ -53,9 +53,9 @@ public class SparseAliasEval {
     }
 
     private void handleAliasQueryTime() {
-        Duration totalDuration = SparseAliasManager.getInstance(sparsificationStrategy).getTotalDuration();
+        Duration totalDuration = StrategyDeciderManager.getInstance(sparsificationStrategy).getTotalDuration();
         if(totalDuration!=null){
-            totalAliasQueryTime = SparseAliasManager.getInstance(sparsificationStrategy).getTotalDuration().toMillis();
+            totalAliasQueryTime = StrategyDeciderManager.getInstance(sparsificationStrategy).getTotalDuration().toMillis();
         }else{
             totalAliasQueryTime = 0;
         }

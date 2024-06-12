@@ -19,6 +19,7 @@ import soot.jimple.infoflow.aliasing.NullAliasStrategy;
 import soot.jimple.infoflow.aliasing.PtsBasedAliasStrategy;
 import soot.jimple.infoflow.aliasing.sparse.AliasAwareSparseBoomerangAliasStrategy;
 import soot.jimple.infoflow.aliasing.sparse.DefaultBoomerangAliasStrategy;
+import soot.jimple.infoflow.aliasing.sparse.DynamicSparseBoomerangAliasStrategy;
 import soot.jimple.infoflow.aliasing.sparse.TypeBasedSparseBoomerangAliasStrategy;
 import soot.jimple.infoflow.cfg.BiDirICFGFactory;
 import soot.jimple.infoflow.data.Abstraction;
@@ -156,6 +157,11 @@ public class Infoflow extends AbstractInfoflow {
 			backProblem = null;
 			backSolver = null;
 			aliasingStrategy = new AliasAwareSparseBoomerangAliasStrategy(manager);
+			break;
+		case DynamicSparseBoomerang:
+			backProblem = null;
+			backSolver = null;
+			aliasingStrategy = new DynamicSparseBoomerangAliasStrategy(manager);
 			break;
 		default:
 			throw new RuntimeException("Unsupported aliasing algorithm");
