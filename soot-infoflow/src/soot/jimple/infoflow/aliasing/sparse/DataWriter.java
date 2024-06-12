@@ -2,6 +2,7 @@ package soot.jimple.infoflow.aliasing.sparse;
 
 import boomerang.BackwardQuery;
 import boomerang.datacollection.DataCollection;
+import boomerang.datacollection.DecisionLog;
 import boomerang.datacollection.MethodLog;
 import boomerang.datacollection.QueryLog;
 import boomerang.scene.sparse.SparseAliasingCFG;
@@ -29,7 +30,7 @@ import java.util.*;
 
 public class DataWriter {
 
-    private final String OUT_PUT_DIR = "./raw_data";
+    private final String OUT_PUT_DIR = "./raw/raw_method_result";
     private static File file;
     private static String targetProgram;
     private List<FeatureExtractionUnit> featureExtractors = new ArrayList<>();
@@ -51,7 +52,7 @@ public class DataWriter {
     public void write(){
         createFileName();
         //write head
-        String head = createHead();
+        String head = createHeadForDataCollection();
         try{
             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), "UTF-8"));
             writer.write(head);
@@ -63,11 +64,42 @@ public class DataWriter {
         //write data
         try{
             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file, true), "UTF-8"));
-            int queryCount = SparseAliasManager.getInstance(sparsificationStrategy).getQueryCount();
+            int queryCount = StrategyDeciderManager.getInstance(sparsificationStrategy).getQueryCount();
             for(int i = 0; i < queryCount; i++ ){
                 String prefix = createPrefixForQuery(i);
                 QueryLog queryLog = DataCollection.getInstance().getQueryLog(i);
                 List<String> data = arrangeDataForMethods(prefix, queryLog);
+                for(String item :  data){
+                    writer.write(item);
+                }
+            }
+            writer.flush();
+            writer.close();
+        }catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void writeResult(){
+        createFileName();
+        //write head
+        String head = createHeadForResultComparison();
+        try{
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), "UTF-8"));
+            writer.write(head);
+            writer.flush();
+            writer.close();
+        }catch (IOException e) {
+            e.printStackTrace();
+        }
+        //write data
+        try{
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file, true), "UTF-8"));
+            int queryCount = StrategyDeciderManager.getInstance(sparsificationStrategy).getQueryCount();
+            for(int i = 0; i < queryCount; i++ ){
+                String prefix = createPrefixForQuery(i);
+                QueryLog queryLog = DataCollection.getInstance().getQueryLog(i);
+                List<String> data = arrangeResultForMethods(prefix, queryLog);
                 for(String item :  data){
                     writer.write(item);
                 }
@@ -99,7 +131,34 @@ public class DataWriter {
         }
     }
 
-    private String createHead(){
+    private String createHeadForResultComparison(){
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append("queryId");
+        stringBuilder.append(",");
+        stringBuilder.append("queryInfo");
+        stringBuilder.append(",");
+        stringBuilder.append("queryTime");
+        stringBuilder.append(",");
+        stringBuilder.append("PDSBuildingTime");
+        stringBuilder.append(",");
+        stringBuilder.append("aliasesSearchingTime");
+        stringBuilder.append(",");
+        stringBuilder.append("methodSignature");
+        stringBuilder.append(",");
+        stringBuilder.append("decision");
+        stringBuilder.append(",");
+        stringBuilder.append("built/retrieved");
+        stringBuilder.append(",");
+        stringBuilder.append("scfg");
+        stringBuilder.append(",");
+        stringBuilder.append("sparseDegree");
+        stringBuilder.append(",");
+        stringBuilder.append("visitedTime");
+        stringBuilder.append(System.lineSeparator());
+        return stringBuilder.toString();
+    }
+
+    private String createHeadForDataCollection(){
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("queryId");
         stringBuilder.append(",");
@@ -150,19 +209,110 @@ public class DataWriter {
         StringBuilder sb = new StringBuilder();
         sb.append(count);
         sb.append(",");
-        BackwardQuery query = SparseAliasManager.getInstance(sparsificationStrategy).getId2Query().get(id);
+        BackwardQuery query = StrategyDeciderManager.getInstance(sparsificationStrategy).getId2Query().get(id);
         sb.append(query.getInfo().replace(',', ' '));
         sb.append(",");
-        String queryTime = String.valueOf(SparseAliasManager.getInstance(sparsificationStrategy).getId2QueryTime().get(id));
+        String queryTime = String.valueOf(StrategyDeciderManager.getInstance(sparsificationStrategy).getId2QueryTime().get(id));
         sb.append(queryTime);
         sb.append(",");
-        String pdsTime = String.valueOf(SparseAliasManager.getInstance(sparsificationStrategy).getId2PDSBuildingTime().get(id));
+        String pdsTime = String.valueOf(StrategyDeciderManager.getInstance(sparsificationStrategy).getId2PDSBuildingTime().get(id));
         sb.append(pdsTime);
         sb.append(",");
-        String aliasingTime = String.valueOf(SparseAliasManager.getInstance(sparsificationStrategy).getId2AliasSearchingTime().get(id));
+        String aliasingTime = String.valueOf(StrategyDeciderManager.getInstance(sparsificationStrategy).getId2AliasSearchingTime().get(id));
         sb.append(aliasingTime);
         sb.append(",");
         return sb.toString();
+    }
+
+    private List<String> arrangeResultForMethods(String prefix, QueryLog queryLog){
+        List<String> result = new ArrayList<>();
+
+        //arrange visited time
+        Map<SootMethod, Long> method2Time = new HashMap<>();
+        List<MethodLog> logs = queryLog.getMethodLogs();
+        if(logs == null){
+            return result;
+        }
+        for(MethodLog log : logs){
+            SootMethod method = log.getMethod();
+            Long time = log.getDuration().toNanos();
+            if(method2Time.containsKey(method)){
+                time += method2Time.get(method);
+            }
+            method2Time.put(method, time);
+        }
+        //delete repeated queries
+        if(visitedQueries.keySet().contains(queryLog.getQuery().getInfo())){
+            assert visitedQueries.get(queryLog.getQuery().getInfo()).size() == method2Time.keySet().size();
+            for(SootMethod method : method2Time.keySet()){
+                assert visitedQueries.get(queryLog.getQuery().getInfo()).contains(method.getSignature());
+            }
+            return result;
+        }
+        Set<String> ms = new HashSet<>();
+        for(SootMethod method : method2Time.keySet()){
+            ms.add(method.getSignature());
+        }
+        visitedQueries.put(queryLog.getQuery().getInfo(), ms);
+        count++;
+        //arrange decision logs
+        Map<String, Integer> method2Decision = new HashMap<>();
+        List<DecisionLog> decisionLogs = queryLog.getDecisionLogs();
+        for(DecisionLog log : decisionLogs){
+            method2Decision.put(log.getMethodSig(), log.getDecision());
+        }
+        //arrange scfg logs
+        Map<SootMethod, String> method2Result = new HashMap<>();
+        List<SparseCFGQueryLog> scfgLogs = queryLog.getSCFGLogs();
+        for(SparseCFGQueryLog scfgLog : scfgLogs){
+            SootMethod method = scfgLog.getMethod();
+            StringBuilder sb = new StringBuilder();
+            boolean retrieved = scfgLog.isRetrievedFromCache();
+            sb.append(prefix);
+            sb.append(method.getSignature().replace(',', ' '));
+            sb.append(",");
+            if(sparsificationStrategy == SparseCFGCache.SparsificationStrategy.DYNAMIC){
+                sb.append(method2Decision.get(method.getSignature()));
+            }else {
+                sb.append("NN");
+            }
+            sb.append(",");
+            if(retrieved){
+                sb.append("retrieved");
+                sb.append(",");
+                sb.append(scfgLog.getScfg());
+                sb.append(",");
+                sb.append("NN");
+            }else {
+                sb.append("built");
+                sb.append(",");
+                sb.append(scfgLog.getScfg());
+                sb.append(",");
+                double degree = (double) scfgLog.getFinalStmtCount()/(double) scfgLog.getInitialStmtCount();
+                sb.append(String.format("%.2f", degree));
+            }
+            sb.append(",");
+            sb.append(method2Time.get(method));
+            sb.append(System.lineSeparator());
+            method2Result.put(method, sb.toString());
+        }
+        //arrange to data
+        for(SootMethod method : method2Result.keySet()){
+            result.add(method2Result.get(method));
+        }
+        for(Map.Entry<SootMethod, Long> entry : method2Time.entrySet()){
+            if(!method2Result.containsKey(entry.getKey())){
+                StringBuilder sb = new StringBuilder();
+                sb.append(prefix);
+                sb.append(entry.getKey().getSignature().replace(',', ' '));
+                sb.append(",");
+                sb.append("NN,NN,NN,NN,");
+                sb.append(entry.getValue());
+                sb.append(System.lineSeparator());
+                result.add(sb.toString());
+            }
+        }
+        return result;
     }
 
     private List<String> arrangeDataForMethods(String prefix, QueryLog queryLog){
@@ -170,7 +320,7 @@ public class DataWriter {
 
         //arrange visited time
         Map<SootMethod, Long> method2Time = new HashMap<>();
-        List<MethodLog> logs = queryLog.getLogList();
+        List<MethodLog> logs = queryLog.getMethodLogs();
         if(logs == null){
             return result;
         }
@@ -197,7 +347,7 @@ public class DataWriter {
         count++;
         //arrange scfg logs
         Map<SootMethod, String> method2Result = new HashMap<>();
-        List<SparseCFGQueryLog> scfgLogs = queryLog.getSCFGLogList();
+        List<SparseCFGQueryLog> scfgLogs = queryLog.getSCFGLogs();
         for(SparseCFGQueryLog scfgLog : scfgLogs){
             SootMethod method = scfgLog.getMethod();
             StringBuilder sb = new StringBuilder();

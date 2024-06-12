@@ -109,7 +109,6 @@ public class StrategyDeciderManager {
     }
 
     private StrategyDeciderManager(SparseCFGCache.SparsificationStrategy sparsificationStrategy) {
-        System.out.println("I'm here");
         this.sparsificationStrategy = sparsificationStrategy;
         if (sparsificationStrategy == SparseCFGCache.SparsificationStrategy.DYNAMIC) {
             Stopwatch stopwatch = Stopwatch.createStarted();
@@ -117,7 +116,6 @@ public class StrategyDeciderManager {
             try {
                 evaluator = new LoadingModelEvaluatorBuilder().load(pmml).build();
                 evaluatorBuildingDuration = stopwatch.stop().elapsed();
-                System.out.println(evaluatorBuildingDuration.toNanos());
             } catch (Exception e) {
                 e.printStackTrace();
             }
