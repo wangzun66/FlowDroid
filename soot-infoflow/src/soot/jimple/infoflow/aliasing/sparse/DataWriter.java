@@ -30,7 +30,7 @@ import java.util.*;
 
 public class DataWriter {
 
-    private final String OUT_PUT_DIR = "./raw/raw_method_result";
+    private final String OUT_PUT_DIR = "./method_raw_result";
     private static File file;
     private static String targetProgram;
     private List<FeatureExtractionUnit> featureExtractors = new ArrayList<>();

@@ -1,5 +1,8 @@
 package soot.jimple.infoflow.aliasing.sparse;
 
+import boomerang.datacollection.DataCollection;
+import boomerang.datacollection.DecisionLog;
+import boomerang.datacollection.QueryLog;
 import boomerang.scene.sparse.SparseCFGCache;
 import boomerang.scene.sparse.eval.SparseCFGQueryLog;
 import soot.jimple.infoflow.results.InfoflowPerformanceData;
@@ -9,6 +12,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 
 /**
  * to create evaluation data
@@ -16,14 +20,17 @@ import java.util.List;
  */
 public class SparseAliasEval {
 
-    private static final String OUT_PUT_DIR = "./results";
+    private static final String OUT_PUT_DIR = "./apk_raw_result";
     private static final String FILE = "alias_eval.csv";
-    public static String targetProgram;
+    private static String targetProgram;
 
     private final SparseCFGCache.SparsificationStrategy sparsificationStrategy;
-    private long sparseCFGBuildTime=0;
-    private long totalAliasQueryTime=0;
-    private long aliasQueryCount = 0; // issued by the client
+    private long pdsBuildingTime=0;
+    private long aliasingSearchingTime = 0;
+    private long evaluatorBuildingTime = 0;
+    private long decisionTime = 0;
+    private long queryCount = 0;
+    private long sparseCFGBuildTime=0;// issued by the client
     private long scfgBuildCount = 0; // client queries + internal queries that lead to SCFG construction, i.e. not retrieved from cache
     private InfoflowPerformanceData performanceData;
     private float initialStmtCount = 0;
@@ -33,34 +40,36 @@ public class SparseAliasEval {
         this.sparsificationStrategy = sparsificationStrategy;
         this.performanceData = performanceData;
         handleSparsificationSpecificData();
-        handleAliasQueryTime();
-        this.aliasQueryCount = StrategyDeciderManager.getInstance(sparsificationStrategy).getQueryCount();
     }
 
-    private void handleSparsificationSpecificData() {
-        if(sparsificationStrategy!= SparseCFGCache.SparsificationStrategy.NONE){
-            SparseCFGCache cache = SparseCFGCache.getInstance(sparsificationStrategy, true);
-            List<SparseCFGQueryLog> queryLogs = cache.getSCFGLogs();
-            for (SparseCFGQueryLog queryLog : queryLogs) {
-                //sparseCFGBuildTime += queryLog.getDuration().toMillis();
-                if(queryLog.getInitialStmtCount()>0 && queryLog.getFinalStmtCount()>0){
-                    initialStmtCount += queryLog.getInitialStmtCount();
-                    finalStmtCount += queryLog.getFinalStmtCount();
+    public static void setTargetProgram(String apkname){
+        targetProgram = apkname;
+    }
+
+    private void handleSparsificationSpecificData(){
+        queryCount = StrategyDeciderManager.getInstance(sparsificationStrategy).getQueryCount();
+        Map<Integer, Long> id2PDSBuildingTime = StrategyDeciderManager.getInstance(sparsificationStrategy).getId2PDSBuildingTime();
+        Map<Integer, Long> id2AliasSearchingTime = StrategyDeciderManager.getInstance(sparsificationStrategy).getId2AliasSearchingTime();
+        evaluatorBuildingTime = StrategyDeciderManager.getInstance(sparsificationStrategy).getEvaluatorBuildingDuration().toNanos();
+        for(int i = 0; i < queryCount; i++ ){
+            pdsBuildingTime += id2PDSBuildingTime.get(i);
+            aliasingSearchingTime += id2AliasSearchingTime.get(i);
+            QueryLog queryLog = DataCollection.getInstance().getQueryLog(i);
+            List<SparseCFGQueryLog> scfgLogs = queryLog.getSCFGLogs();
+            List<DecisionLog> decisionLogs = queryLog.getDecisionLogs();
+            for (SparseCFGQueryLog scfgLog : scfgLogs) {
+                sparseCFGBuildTime += scfgLog.getDuration().toNanos();
+                if(scfgLog.getInitialStmtCount()>0 && scfgLog.getFinalStmtCount()>0){
+                    initialStmtCount += scfgLog.getInitialStmtCount();
+                    finalStmtCount += scfgLog.getFinalStmtCount();
                     scfgBuildCount++;
                 }
             }
+            for (DecisionLog decisionLog : decisionLogs){
+                decisionTime += decisionLog.getDuration().toNanos();
+            }
         }
     }
-
-    private void handleAliasQueryTime() {
-        Duration totalDuration = StrategyDeciderManager.getInstance(sparsificationStrategy).getTotalDuration();
-        if(totalDuration!=null){
-            totalAliasQueryTime = StrategyDeciderManager.getInstance(sparsificationStrategy).getTotalDuration().toMillis();
-        }else{
-            totalAliasQueryTime = 0;
-        }
-    }
-
 
     public void generate() {
         File dir = new File(OUT_PUT_DIR);
@@ -75,19 +84,25 @@ public class SparseAliasEval {
                 str.append(",");
                 str.append("strategy");
                 str.append(",");
-                str.append("qTime");
+                str.append("PDSBuildingTime");
                 str.append(",");
-                str.append("SCFG");
+                str.append("SCFGBuildingTime");
+                str.append(",");
+                str.append("aliasesSearchingTime");
+                str.append(",");
+                str.append("evaluatorBuildingTime");
+                str.append(",");
+                str.append("decisionTime");
                 str.append(",");
                 str.append("runtime");
                 str.append(",");
-                str.append("mem");
+                str.append("memoryCost");
                 str.append(",");
-                str.append("qCount");
+                str.append("queryCount");
                 str.append(",");
-                str.append("DoS");
+                str.append("degreeOfSparse");
                 str.append(",");
-                str.append("src");
+                str.append("sourceCount");
                 str.append(",");
                 str.append("SCFGCount");
                 str.append(System.lineSeparator());
@@ -102,15 +117,21 @@ public class SparseAliasEval {
             str.append(",");
             str.append(sparsificationStrategy);
             str.append(",");
-            str.append(totalAliasQueryTime);
+            str.append(pdsBuildingTime);
             str.append(",");
             str.append(sparseCFGBuildTime);
+            str.append(",");
+            str.append(aliasingSearchingTime);
+            str.append(",");
+            str.append(evaluatorBuildingTime);
+            str.append(",");
+            str.append(decisionTime);
             str.append(",");
             str.append(performanceData.getTotalRuntimeSeconds());
             str.append(",");
             str.append(performanceData.getMaxMemoryConsumption());
             str.append(",");
-            str.append(aliasQueryCount);
+            str.append(queryCount);
             str.append(",");
             str.append(degreeOfSparsification());
             str.append(",");

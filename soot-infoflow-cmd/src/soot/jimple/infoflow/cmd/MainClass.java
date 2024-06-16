@@ -362,8 +362,8 @@ public class MainClass {
 				if (taintWrapper instanceof SummaryTaintWrapper)
 					injectStubDroidHierarchy((SummaryTaintWrapper) taintWrapper);
 
-				//SparseAliasEval.targetProgram = apkFile.getName();
-				DataWriter.setTargetProgram(apkFile.getName());
+				SparseAliasEval.setTargetProgram(apkFile.getName());
+				//DataWriter.setTargetProgram(apkFile.getName());
 				// Start the data flow analysis
 				analyzer.runInfoflow();
 

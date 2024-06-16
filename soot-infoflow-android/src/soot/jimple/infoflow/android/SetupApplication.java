@@ -1637,9 +1637,11 @@ public class SetupApplication implements ITaintWrapperDataFlowAnalysis {
 			SparseAliasEval sparseAliasEval = new SparseAliasEval(sparsificationStrategy, performanceData);
 			sparseAliasEval.generate();
 		}*/
-		DataWriter dataWriter = new DataWriter(sparsificationStrategy);
+		//DataWriter dataWriter = new DataWriter(sparsificationStrategy);
 		//dataWriter.write();
-		dataWriter.writeResult();
+		//dataWriter.writeResult();
+		SparseAliasEval sparseAliasEval = new SparseAliasEval(sparsificationStrategy, performanceData);
+		sparseAliasEval.generate();
 	}
 
 	/**
