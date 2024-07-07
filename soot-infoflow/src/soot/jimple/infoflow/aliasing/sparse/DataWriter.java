@@ -170,7 +170,7 @@ public class DataWriter {
 
         //arrange visited time
         Map<SootMethod, Long> method2Time = new HashMap<>();
-        List<MethodLog> logs = queryLog.getLogList();
+        List<MethodLog> logs = queryLog.getMethodLogs();
         if(logs == null){
             return result;
         }
@@ -197,7 +197,7 @@ public class DataWriter {
         count++;
         //arrange scfg logs
         Map<SootMethod, String> method2Result = new HashMap<>();
-        List<SparseCFGQueryLog> scfgLogs = queryLog.getSCFGLogList();
+        List<SparseCFGQueryLog> scfgLogs = queryLog.getSCFGLogs();
         for(SparseCFGQueryLog scfgLog : scfgLogs){
             SootMethod method = scfgLog.getMethod();
             StringBuilder sb = new StringBuilder();

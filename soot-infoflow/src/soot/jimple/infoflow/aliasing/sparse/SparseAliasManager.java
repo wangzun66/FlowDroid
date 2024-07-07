@@ -173,7 +173,7 @@ public class SparseAliasManager {
         this.id2AliasSearchingTime.put(queryCount - 1, elapsed.toNanos());
 
         if (sparsificationStrategy != SparseCFGCache.SparsificationStrategy.NONE) {
-            queryLog.storeSCFGLogList(
+            queryLog.storeSCFGLogs(
                     SparseCFGCache.getInstance(sparsificationStrategy, true).getSCFGLogs());
             SparseCFGCache.getInstance(sparsificationStrategy, true).resetSCFGLogs();
         }
@@ -190,7 +190,7 @@ public class SparseAliasManager {
                     this.id2PDSBuildingTime.get(i),
                     this.id2AliasSearchingTime.get(i));
             QueryLog queryLog = dataCollection.getQueryLog(i);
-            for (MethodLog methodLog : queryLog.getLogList()) {
+            for (MethodLog methodLog : queryLog.getMethodLogs()) {
                 LOGGER.info(methodLog.toString());
             }
         }
