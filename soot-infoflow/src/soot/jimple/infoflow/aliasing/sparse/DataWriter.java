@@ -11,13 +11,12 @@ import boomerang.scene.sparse.eval.SparseCFGQueryLog;
 import core.fx.base.*;
 import core.fx.methodbased.AllocationCount;
 import core.fx.methodbased.MethodStmtCount;
-import core.fx.methodbased.ProportionOfRelevantStmts;
-import core.fx.methodstmtbased.ProportionOfRelevantStmtsBeforeStmt;
-import core.fx.methodstmtbased.ProportionOfVisitedMethodBeforeStmt;
-import core.fx.methodstmtbased.StmtDepthProportion;
-import core.fx.methodvarbased.ProportionOfVisitedMethod;
-import core.fx.methodvarbased.RelatedTypesCount;
-import core.fx.methodvarbased.TypeHierarchySize;
+import core.fx.methodbased.PropOfInvokeAssign;
+import core.fx.methodbased.methodstmtbased.*;
+import core.fx.methodbased.methodvarbased.MethodVarFEU;
+import core.fx.methodbased.methodvarbased.PropOfRelatedInvoke;
+import core.fx.methodbased.methodvarbased.RelatedTypesCount;
+import core.fx.variablebased.TypeHierarchySize;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
@@ -271,7 +270,7 @@ public class DataWriter {
             sb.append(prefix);
             sb.append(method.getSignature().replace(',', ' '));
             sb.append(",");
-            if(sparsificationStrategy == SparseCFGCache.SparsificationStrategy.DYNAMIC){
+            if(sparsificationStrategy == SparseCFGCache.SparsificationStrategy.ADAPTIVE){
                 sb.append(method2Decision.get(method.getSignature()));
             }else {
                 sb.append("NN");
@@ -433,37 +432,42 @@ public class DataWriter {
     }
 
     private void createFeaturesExtractor(){
+        featureExtractors.add(new IsReturnStmt());
         featureExtractors.add(new MethodStmtCount());
         featureExtractors.add(new RelatedTypesCount());
         featureExtractors.add(new TypeHierarchySize());
-        featureExtractors.add(new ProportionOfVisitedMethod());
-        featureExtractors.add(new ProportionOfRelevantStmts());
-        featureExtractors.add(new StmtDepthProportion());
+        featureExtractors.add(new PropOfRelatedInvoke());
+        featureExtractors.add(new PropOfInvokeAssign());
+        featureExtractors.add(new StmtDepth());
         featureExtractors.add(new AllocationCount());
-        featureExtractors.add(new ProportionOfRelevantStmtsBeforeStmt());
-        featureExtractors.add(new ProportionOfVisitedMethodBeforeStmt());
+        featureExtractors.add(new PropOfRelevantStmtBeforeStmt());
+        featureExtractors.add(new PropOfInvokeBeforeStmt());
     }
 
     private List<Feature> extract(SootMethod method, Value value, Stmt stmt) {
         List<Feature> features = new ArrayList<>();
-
         for (FeatureExtractionUnit extractor : featureExtractors) {
-            Feature feature = null;
-            if (extractor instanceof MethodFEU) {
-                feature = ((MethodFEU<?>) extractor).extract(method);
-            } else if (extractor instanceof MethodVarFEU) {
+            Feature feature;
+            if(extractor instanceof MethodVarFEU){
                 if(value != null){
                     feature = ((MethodVarFEU<?>) extractor).extract(method, value);
                 }else {
                     feature = null;
                 }
-
-            } else if (extractor instanceof MethodStmtFEU) {
+            }else if(extractor instanceof MethodStmtFEU){
                 if(stmt != null){
                     feature = ((MethodStmtFEU<?>) extractor).extract(method, stmt);
                 }else {
                     feature = null;
                 }
+            }else if (extractor instanceof VariableFEU){
+                if(value != null){
+                    feature = ((VariableFEU<?>) extractor).extract(value);
+                }else {
+                    feature = null;
+                }
+            }else {
+                feature = ((MethodFEU<?>) extractor).extract(method);
             }
             features.add(feature);
         }
@@ -506,38 +510,35 @@ public class DataWriter {
     }
 
     private void writeSCFGBody(SootMethod method) {
-        Map<String, Map<String, Set<SparseAliasingCFG>> > cache = SparseCFGCache.getInstance(sparsificationStrategy, true).getCache();
-        if(!cache.containsKey(method.getSignature())){
+        Map<String, Set<SparseAliasingCFG>> cache = SparseCFGCache.getInstance(sparsificationStrategy, true).getCache();
+        if (!cache.containsKey(method.getSignature())) {
             return;
         }
         int toIndex = targetProgram.lastIndexOf(".apk");
         String apk_name = targetProgram.substring(0, toIndex);
-        File dir = new File(OUT_PUT_DIR+File.separator+ "Methods" + File.separator + apk_name + File.separator + "SCFG_" + sparsificationStrategy);
-        if(!dir.exists()){
+        File dir = new File(OUT_PUT_DIR + File.separator + "Methods" + File.separator + apk_name + File.separator + "SCFG_" + sparsificationStrategy);
+        if (!dir.exists()) {
             dir.mkdir();
         }
-        Map<String, Set<SparseAliasingCFG>> queryInfo2SCFG = cache.get(method.getSignature());
+        Set<SparseAliasingCFG> scfgs = cache.get(method.getSignature());
         String filename = method.getDeclaringClass() + "." + method.getName();
-        int i= 0;
-        for(Map.Entry<String, Set<SparseAliasingCFG>> entry : queryInfo2SCFG.entrySet()){
-            for(SparseAliasingCFG scfg : entry.getValue()){
-                String name = filename+ "_" + i;
-                File methodFile = new File(dir + File.separator + name);
-                i++;
-                if(methodFile.exists()){
-                    return;
+        int i = 0;
+        for (SparseAliasingCFG scfg : scfgs) {
+            String name = filename + "_" + i;
+            File methodFile = new File(dir + File.separator + name);
+            i++;
+            if (methodFile.exists()) {
+                return;
+            }
+            try {
+                BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(methodFile, true), "UTF-8"));
+                for (Unit stmt : scfg.getGraph().nodes()) {
+                    writer.write(stmt.toString() + System.lineSeparator());
                 }
-                try{
-                    BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(methodFile, true), "UTF-8"));
-                    writer.write(entry.getKey() + System.lineSeparator());
-                    for(Unit stmt : scfg.getGraph().nodes()){
-                        writer.write(stmt.toString() + System.lineSeparator());
-                    }
-                    writer.flush();
-                    writer.close();
-                }catch (Exception e){
-                    e.printStackTrace();
-                }
+                writer.flush();
+                writer.close();
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
     }

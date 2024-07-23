@@ -107,7 +107,7 @@ public class InfoflowConfiguration {
 		/**
 		 * Use Boomerang with strategy decider
 		 */
-		DynamicSparseBoomerang
+		AdaptiveSparseBoomerang
 	}
 
 	/**

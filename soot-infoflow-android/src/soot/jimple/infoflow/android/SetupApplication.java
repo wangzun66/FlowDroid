@@ -1628,8 +1628,8 @@ public class SetupApplication implements ITaintWrapperDataFlowAnalysis {
 			case AliasAwareSparseBoomerang:
 				sparsificationStrategy = SparseCFGCache.SparsificationStrategy.ALIAS_AWARE;
 				break;
-			case DynamicSparseBoomerang:
-				sparsificationStrategy = SparseCFGCache.SparsificationStrategy.DYNAMIC;
+			case AdaptiveSparseBoomerang:
+				sparsificationStrategy = SparseCFGCache.SparsificationStrategy.ADAPTIVE;
 			default:
 				break;
 		}

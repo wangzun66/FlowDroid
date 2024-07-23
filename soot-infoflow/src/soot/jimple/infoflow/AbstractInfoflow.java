@@ -16,7 +16,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import boomerang.scene.jimple.BoomerangPretransformer;
-import boomerang.scene.sparse.SparseCFGCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +40,6 @@ import soot.jimple.infoflow.InfoflowConfiguration.SootIntegrationMode;
 import soot.jimple.infoflow.InfoflowConfiguration.StaticFieldTrackingMode;
 import soot.jimple.infoflow.aliasing.Aliasing;
 import soot.jimple.infoflow.aliasing.IAliasingStrategy;
-import soot.jimple.infoflow.aliasing.sparse.SparseAliasEval;
 import soot.jimple.infoflow.cfg.BiDirICFGFactory;
 import soot.jimple.infoflow.cfg.DefaultBiDiICFGFactory;
 import soot.jimple.infoflow.cfg.LibraryClassPatcher;
@@ -647,7 +645,7 @@ public abstract class AbstractInfoflow implements IInfoflow {
 		return config.getAliasingAlgorithm() == InfoflowConfiguration.AliasingAlgorithm.Boomerang
 				|| config.getAliasingAlgorithm() == InfoflowConfiguration.AliasingAlgorithm.TypeBasedSparseBoomerang
 				|| config.getAliasingAlgorithm() == InfoflowConfiguration.AliasingAlgorithm.AliasAwareSparseBoomerang
-				|| config.getAliasingAlgorithm() == InfoflowConfiguration.AliasingAlgorithm.DynamicSparseBoomerang;
+				|| config.getAliasingAlgorithm() == InfoflowConfiguration.AliasingAlgorithm.AdaptiveSparseBoomerang;
 	}
 
 	private void runTaintAnalysis(final ISourceSinkManager sourcesSinks, final Set<String> additionalSeeds,

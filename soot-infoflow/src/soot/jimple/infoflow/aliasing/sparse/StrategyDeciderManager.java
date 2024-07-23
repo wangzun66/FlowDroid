@@ -110,10 +110,9 @@ public class StrategyDeciderManager {
 
     private StrategyDeciderManager(SparseCFGCache.SparsificationStrategy sparsificationStrategy) {
         this.sparsificationStrategy = sparsificationStrategy;
-        if (sparsificationStrategy == SparseCFGCache.SparsificationStrategy.DYNAMIC) {
+        if (sparsificationStrategy == SparseCFGCache.SparsificationStrategy.ADAPTIVE) {
             Stopwatch stopwatch = Stopwatch.createStarted();
-            File pmml = new File("./pmml/strategy_decider.pmml");
-            System.out.println();
+            File pmml = new File("./pmml/xgboost_model.pmml");
             try {
                 evaluator = new LoadingModelEvaluatorBuilder().load(pmml).build();
                 evaluatorBuildingDuration = stopwatch.stop().elapsed();
@@ -200,7 +199,7 @@ public class StrategyDeciderManager {
         elapsed = stopwatch2.elapsed();
         this.id2AliasSearchingTime.put(queryCount - 1, elapsed.toNanos());
 
-        if (sparsificationStrategy == SparseCFGCache.SparsificationStrategy.DYNAMIC) {
+        if (sparsificationStrategy == SparseCFGCache.SparsificationStrategy.ADAPTIVE) {
             queryLog.storeSCFGLogs(
                     SparseCFGCache.getInstance(
                                     SparseCFGCache.SparsificationStrategy.TYPE_BASED, true)
